@@ -58,7 +58,8 @@
 
 lv_obj_t *UserMods_main_tile = NULL;
 lv_style_t UserMods_main_style;
-
+bool idle_on = false;
+bool invert_on = false;
 //lv_task_t * _UserMods_task; //unused
 
 LV_IMG_DECLARE(exit_32px);
@@ -75,6 +76,9 @@ static void On_ChargeLED_UserMods_main_event_cb( lv_obj_t * obj, lv_event_t even
 static void Off_ChargeLED_UserMods_main_event_cb( lv_obj_t * obj, lv_event_t event );
 
 static void EnableChargeLED_UserMods_main_event_cb( lv_obj_t * obj, lv_event_t event );
+
+static void On_TFT_IDLE_UserMods_main_event_cb( lv_obj_t * obj, lv_event_t event );
+static void On_TFT_INVERT_UserMods_main_event_cb( lv_obj_t * obj, lv_event_t event );
 
 void UserMods_main_setup( uint32_t tile_num ) {
 
@@ -144,14 +148,32 @@ void UserMods_main_setup( uint32_t tile_num ) {
         //Top Left, Charge LED blink
     lv_obj_t *UserMods_main_CHGLEDCHRGCONTROLLED_btn = NULL;
     UserMods_main_CHGLEDCHRGCONTROLLED_btn = lv_btn_create( UserMods_main_tile, NULL);  
-    lv_obj_set_size( UserMods_main_CHGLEDCHRGCONTROLLED_btn, 70, 40);
+    lv_obj_set_size( UserMods_main_CHGLEDCHRGCONTROLLED_btn, 70, 60);
     lv_obj_set_event_cb( UserMods_main_CHGLEDCHRGCONTROLLED_btn, EnableChargeLED_UserMods_main_event_cb );
     lv_obj_add_style( UserMods_main_CHGLEDCHRGCONTROLLED_btn, LV_BTN_PART_MAIN, mainbar_get_button_style() );
     lv_obj_align( UserMods_main_CHGLEDCHRGCONTROLLED_btn, NULL, LV_ALIGN_CENTER, 0, -30 );
     lv_obj_t *UserMods_indicatorOn_label = lv_label_create( UserMods_main_CHGLEDCHRGCONTROLLED_btn, NULL);
-    lv_label_set_text( UserMods_indicatorOn_label, "Charge Ind.");
+    lv_label_set_text( UserMods_indicatorOn_label, "Chg\nInd.");
     
+    //Bottom Right, Enable TFT IDLE mode
+    lv_obj_t *UserMods_main_TFTIDLEMODEON_btn = NULL;
+    UserMods_main_TFTIDLEMODEON_btn = lv_btn_create( UserMods_main_tile, NULL);  
+    lv_obj_set_size( UserMods_main_TFTIDLEMODEON_btn, 70, 40);
+    lv_obj_set_event_cb( UserMods_main_TFTIDLEMODEON_btn, On_TFT_IDLE_UserMods_main_event_cb );
+    lv_obj_add_style( UserMods_main_TFTIDLEMODEON_btn, LV_BTN_PART_MAIN, mainbar_get_button_style() );
+    lv_obj_align( UserMods_main_TFTIDLEMODEON_btn, NULL, LV_ALIGN_CENTER, 80, 30 );
+    lv_obj_t *UserMods_TFTIDLEMODE_label = lv_label_create( UserMods_main_TFTIDLEMODEON_btn, NULL);
+    lv_label_set_text( UserMods_TFTIDLEMODE_label, "IDLE");
     
+    //Bottom Right, Enable TFT IDLE mode
+    lv_obj_t *UserMods_main_TFTINVERTMODEON_btn = NULL;
+    UserMods_main_TFTINVERTMODEON_btn = lv_btn_create( UserMods_main_tile, NULL);  
+    lv_obj_set_size( UserMods_main_TFTINVERTMODEON_btn, 70, 40);
+    lv_obj_set_event_cb( UserMods_main_TFTINVERTMODEON_btn, On_TFT_INVERT_UserMods_main_event_cb );
+    lv_obj_add_style( UserMods_main_TFTINVERTMODEON_btn, LV_BTN_PART_MAIN, mainbar_get_button_style() );
+    lv_obj_align( UserMods_main_TFTINVERTMODEON_btn, NULL, LV_ALIGN_CENTER, 80, 90 );
+    lv_obj_t *UserMods_TFTINVERTMODE_label = lv_label_create( UserMods_main_TFTINVERTMODEON_btn, NULL);
+    lv_label_set_text( UserMods_TFTINVERTMODE_label, "Invert");
 }
 
 /*//Not yet in use
@@ -223,4 +245,34 @@ static void EnableChargeLED_UserMods_main_event_cb( lv_obj_t * obj, lv_event_t e
     }
 }
 
+static void On_TFT_IDLE_UserMods_main_event_cb( lv_obj_t * obj, lv_event_t event ) {
+    switch( event ) {
+        case( LV_EVENT_CLICKED ):       
+                                        TTGOClass *ttgo;
+                                        ttgo = TTGOClass::getWatch();
+                                        if (!idle_on){
+                                            ttgo->tft->writecommand(0x39);
+                                            idle_on = true;
+                                        }else{
+                                            ttgo->tft->writecommand(0x38);
+                                            idle_on = false;
+                                        }
+                                        break;
+    }
+}
 
+static void On_TFT_INVERT_UserMods_main_event_cb( lv_obj_t * obj, lv_event_t event ) {
+    switch( event ) {
+        case( LV_EVENT_CLICKED ):       
+                                        TTGOClass *ttgo;
+                                        ttgo = TTGOClass::getWatch();
+                                        if (!invert_on){
+                                            ttgo->tft->writecommand(0x21);
+                                            invert_on = true;
+                                        }else{
+                                            ttgo->tft->writecommand(0x20);
+                                            invert_on = false;
+                                        }
+                                        break;
+    }
+}
