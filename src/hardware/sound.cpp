@@ -53,52 +53,84 @@ bool sound_init = false;
 sound_config_t sound_config;
 
 void sound_setup( void ) {
-    if ( sound_init == true )
+    if ( sound_init )
         return;
 
     sound_read_config();
-
-    TTGOClass *ttgo = TTGOClass::getWatch();
-
-    //!Turn on the audio power
-    ttgo->enableLDO3();
-
+    
     //out->SetPinout(I2S_BCLK, I2S_LRC, I2S_DOUT);
     out = new AudioOutputI2S();
     out->SetPinout( TWATCH_DAC_IIS_BCK, TWATCH_DAC_IIS_WS, TWATCH_DAC_IIS_DOUT );
+    sound_set_volume_config( sound_config.volume );
     mp3 = new AudioGeneratorMP3();
     wav = new AudioGeneratorWAV();
 
     sound_init = true;
 }
 
+void sound_standby( void ) {
+    sound_set_enabled(false);
+}
+
+void sound_wakeup( void ) {
+    // to avoid additional power consumtion when waking up, audio is only enabled when 
+    // a 'play sound' method is called
+    // this would be the place to play a wakeup sound
+}
+
+/**
+ * @brief enable or disable the power output for AXP202_LDO3
+ * depending on the current value of: sound_config.enable
+ */
+void sound_set_enabled( bool enabled ) {
+    TTGOClass *ttgo = TTGOClass::getWatch();
+    if ( enabled ) {
+        ttgo->enableLDO3(1);
+    } else {
+        
+        if ( sound_init ) {
+            if ( mp3->isRunning() ) mp3->stop();
+            if ( wav->isRunning() ) wav->stop();
+        }
+        
+        ttgo->enableLDO3(0);
+    }
+}
+
 void sound_loop( void ) {
     if ( sound_config.enable ) {
-        if ( mp3->isRunning() && !mp3->loop() ) mp3->stop();
-        if ( wav->isRunning() && !wav->loop() ) wav->stop();
+        // we call sound_set_enabled(false) to ensure the PMU stops all power
+        if ( mp3->isRunning() && !mp3->loop() ) sound_set_enabled(false);
+        if ( wav->isRunning() && !wav->loop() ) sound_set_enabled(false);
     }
 }
 
 void sound_play_spiffs_mp3( const char *filename ) {
     if ( sound_config.enable ) {
         log_i("playing file %s from SPIFFS", filename);
+        sound_set_enabled(true);
         spliffs_file = new AudioFileSourceSPIFFS(filename);
         id3 = new AudioFileSourceID3(spliffs_file);
         mp3->begin(id3, out);
+    } else {
+        log_i("Cannot play mp3, sound is disabled");
     }
 }
 
 void sound_play_progmem_wav( const void *data, uint32_t len ) {
     if ( sound_config.enable ) {
         log_i("playing audio (size %d) from PROGMEM ", len );
+        sound_set_enabled(true);
         progmem_file = new AudioFileSourcePROGMEM( data, len );
         wav->begin(progmem_file, out);
+    } else {
+        log_i("Cannot play wav, sound is disabled");
     }
 }
 
 void sound_save_config( void ) {
     fs::File file = SPIFFS.open( SOUND_JSON_CONFIG_FILE, FILE_WRITE );
-
+    sound_set_volume_config(sound_config.volume);
     if (!file) {
         log_e("Can't open file: %s!", SOUND_JSON_CONFIG_FILE );
     }
@@ -106,6 +138,7 @@ void sound_save_config( void ) {
         SpiRamJsonDocument doc( 1000 );
 
         doc["enable"] = sound_config.enable;
+        doc["volume"] = sound_config.volume;
 
         if ( serializeJsonPretty( doc, file ) == 0) {
             log_e("Failed to write config file");
@@ -129,9 +162,34 @@ void sound_read_config( void ) {
             log_e("update check deserializeJson() failed: %s", error.c_str() );
         }
         else {
-            sound_config.enable = doc["enable"] | true;
+            sound_config.enable = doc["enable"].as<bool>();
+            sound_config.volume = doc["volume"].as<uint8_t>();;
+            log_i("volume: %d", sound_config.volume);
         }        
         doc.clear();
     }
     file.close();
+}
+
+bool sound_get_enabled_config( void ) {
+    return sound_config.enable;
+}
+
+void sound_set_enabled_config( bool enable ) {
+    sound_config.enable = enable;
+    if ( ! sound_config.enable) {
+        sound_set_enabled( false );
+    }
+    sound_save_config();
+}
+
+uint8_t sound_get_volume_config( void ) {
+    return( sound_config.volume );
+}
+
+void sound_set_volume_config( uint8_t volume ) {
+    log_i("Setting sound volume to: %d", volume);
+    sound_config.volume = volume;
+    // limiting max gain to 3.5 (max gain is 4.0)
+    out->SetGain(3.5f * (sound_config.volume / 100.0f));
 }
