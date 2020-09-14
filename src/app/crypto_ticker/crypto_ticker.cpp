@@ -160,5 +160,4 @@ void crypto_ticker_load_config( void ) {
         }
         file.close();
     }
-
 }

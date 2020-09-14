@@ -195,6 +195,9 @@ static void exit_UserMods_main_event_cb( lv_obj_t * obj, lv_event_t event ) {
     }
 }
 
+
+//May want to move these to use _readByte/_writeByte functions from axp.h so that they work even on new libraries without
+//modification of the library itself
 static void Four_Hz_ChargeLED_UserMods_main_event_cb( lv_obj_t * obj, lv_event_t event ) {
     switch( event ) {
         case( LV_EVENT_CLICKED ):       

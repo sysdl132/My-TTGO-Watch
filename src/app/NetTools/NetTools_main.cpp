@@ -1,7 +1,12 @@
 /****************************************************************************
- *   Aug 3 12:17:11 2020
- *   Copyright  2020  Dirk Brosswick
- *   Email: dirk.brosswick@googlemail.com
+ *  NetTools_main.cpp
+ *  Copyright  2020  David Stewart / NorthernDIY
+ *  Email: genericsoftwaredeveloper@gmail.com
+ *
+ *  Requires Libraries: 
+ *      WakeOnLan by a7md0      https://github.com/a7md0/WakeOnLan
+ *
+ *  Based on the work of Dirk Brosswick,  sharandac / My-TTGO-Watch  Example_App"
  ****************************************************************************/
  
 /*
@@ -28,7 +33,7 @@
 #include <HTTPClient.h>
 
 #include "NetTools.h"
-#include "NetTools_main.h"
+#include "NetTools_main.h"  //See this file to change button text
 
 #include "gui/mainbar/app_tile/app_tile.h"
 #include "gui/mainbar/main_tile/main_tile.h"
@@ -39,12 +44,9 @@
 lv_obj_t *NetTools_main_tile = NULL;
 lv_style_t NetTools_main_style;
 
-//Add your buttons to do things here!
 lv_obj_t *NetTools_main_WakePC_btn = NULL;
 lv_obj_t *NetTools_main_tasmota1_btn = NULL;
-
-//Used to rate limit requests
-uint32_t NetTools_toggle_timer = 0;
+lv_obj_t *NetTools_main_tasmota2_btn = NULL;
 
 lv_task_t * _NetTools_task;
 
@@ -59,6 +61,8 @@ static void enter_NetTools_setup_event_cb( lv_obj_t * obj, lv_event_t event );
 //Add the actions your buttons will do here.
 static void wakePC_NetTools_main_event_cb( lv_obj_t * obj, lv_event_t event );
 static void tasmota1_NetTools_main_event_cb( lv_obj_t * obj, lv_event_t event );
+static void tasmota2_NetTools_main_event_cb( lv_obj_t * obj, lv_event_t event );
+static void tasmota_toggle_NetTools (int toggle_num);
 
 void NetTools_task( lv_task_t * task );
 
@@ -89,7 +93,7 @@ void NetTools_main_setup( uint32_t tile_num ) {
     //WakePC Button
     NetTools_main_WakePC_btn = lv_btn_create(NetTools_main_tile, NULL);  
     lv_obj_set_event_cb( NetTools_main_WakePC_btn, wakePC_NetTools_main_event_cb );
-    lv_obj_align(NetTools_main_WakePC_btn, NULL, LV_ALIGN_CENTER, 0, -60 );
+    lv_obj_align(NetTools_main_WakePC_btn, NULL, LV_ALIGN_CENTER, 0, -80 );
     lv_obj_t *NetTools_main_WakePC_btn_label = lv_label_create(NetTools_main_WakePC_btn, NULL);
     lv_label_set_text(NetTools_main_WakePC_btn_label, WOL_NAME);
     
@@ -100,23 +104,29 @@ void NetTools_main_setup( uint32_t tile_num ) {
     lv_obj_t *NetTools_main_tasmota1_btn_label = lv_label_create(NetTools_main_tasmota1_btn, NULL);
     lv_label_set_text(NetTools_main_tasmota1_btn_label, TOGGLE1_NAME);
     
+    //Tasmota2 Toggle Button
+    NetTools_main_tasmota2_btn = lv_btn_create(NetTools_main_tile, NULL);  
+    lv_obj_set_event_cb( NetTools_main_tasmota2_btn, tasmota2_NetTools_main_event_cb );
+    lv_obj_align(NetTools_main_tasmota2_btn, NULL, LV_ALIGN_CENTER, 0, 50 );
+    lv_obj_t *NetTools_main_tasmota2_btn_label = lv_label_create(NetTools_main_tasmota2_btn, NULL);
+    lv_label_set_text(NetTools_main_tasmota2_btn_label, TOGGLE2_NAME);
     
-    // create an task that runs every minute
+    
+    // create an task that runs every minute, this might be used in the future for ping status
     //    _NetTools_task = lv_task_create( NetTools_task, 60000, LV_TASK_PRIO_MID, NULL );
 }
 
 static void wakePC_NetTools_main_event_cb( lv_obj_t * obj, lv_event_t event ) {
     switch( event ) {
-        case( LV_EVENT_CLICKED ):       // create an task that runs every secound
-                                        //uint32_t task_timer = millis();
-                                        //uint32_t diff = task_timer - NetTools_toggle_timer;
-                                        log_i("WOL OneShot, free heap: %d", ESP.getFreeHeap() );
+        case( LV_EVENT_CLICKED ):
+                                        NetTools_config_t *NetTools_config = NetTools_get_config();
+                                        char *MACAddress = NetTools_config->mac_address;
                                         if (WiFi.isConnected() ){
-                                            log_i("WIFI is connected, sending packet!");
+                                            log_i("WIFI is connected, sending packet! (Target: %s)", MACAddress);
                                             WiFiUDP UDP;
                                             WakeOnLan WOL(UDP);
                                             motor_vibe(7);
-                                            const char *MACAddress = MY_PC_WOL_MAC;
+                                        
                                             WOL.sendMagicPacket(MACAddress);
                                         }else{
                                             log_i("WIFI is disconnected, nothing to do.");
@@ -126,34 +136,63 @@ static void wakePC_NetTools_main_event_cb( lv_obj_t * obj, lv_event_t event ) {
                                         }
                                         break;
     }
-    //NetTools_toggle_timer = millis();
 }
 
 static void tasmota1_NetTools_main_event_cb( lv_obj_t * obj, lv_event_t event ) {
     switch( event ) {
-        case( LV_EVENT_CLICKED ):       // create an task that runs every secound
-                                        //uint32_t task_timer = millis();
-                                        //uint32_t diff = task_timer - NetTools_toggle_timer;
-                                        log_i("Tasmota1 OneShot, free heap: %d", ESP.getFreeHeap() );
+        case( LV_EVENT_CLICKED ):      
                                         if (WiFi.isConnected()){
-                                            log_i("WIFI is connected, sending packet!");
-                                            HTTPClient http;
-                                            http.begin("http://172.17.2.31/cm?cmnd=Power%20Toggle");
-                                            http.GET();
-                                            delay(20);
-                                            http.end();
-                                            motor_vibe(7);
+                                            tasmota_toggle_NetTools(1);
                                         }else{
                                             log_i("WIFI is disconnected, nothing to do.");
-                                            motor_vibe(7);
-                                            delay(10);
-                                            motor_vibe(7);
+                                            motor_vibe(2);
+                                            delay(15);
+                                            motor_vibe(2);
                                         }
                                         break;
     }
-    //NetTools_toggle_timer = millis();
 }
 
+static void tasmota2_NetTools_main_event_cb( lv_obj_t * obj, lv_event_t event ) {
+    switch( event ) {
+        case( LV_EVENT_CLICKED ):      
+                                        if (WiFi.isConnected()){
+                                            tasmota_toggle_NetTools(2);
+                                        }else{
+                                            log_i("WIFI is disconnected, nothing to do.");
+                                            motor_vibe(2);
+                                            delay(15);
+                                            motor_vibe(2);
+                                        }
+                                        break;
+    }
+}
+
+
+static void tasmota_toggle_NetTools( int toggle_num){
+    
+    NetTools_config_t *NetTools_config = NetTools_get_config();
+    
+    char cmd_buffer[46] = HTTP_PREFIX;
+    
+    switch (toggle_num){
+        case (1):
+            strlcat( cmd_buffer, NetTools_config->tasmota1_ip, sizeof(cmd_buffer) );
+            break;
+        case (2):
+            strlcat( cmd_buffer, NetTools_config->tasmota2_ip, sizeof(cmd_buffer) );
+            break;
+    }
+    strlcat( cmd_buffer, TASMOTA_SUFFIX, sizeof(cmd_buffer) );
+    log_i("Attempt to send tasmota toggle (%d) to: %s", toggle_num ,cmd_buffer);
+    HTTPClient http;
+    http.setTimeout(300);
+    http.begin(cmd_buffer);
+    http.GET();
+    delay(20); //Need time for data to move through network handler routines
+    http.end();
+    motor_vibe(3);
+}
 
 
 //Enter and Exit App Events,
@@ -173,6 +212,6 @@ static void exit_NetTools_main_event_cb( lv_obj_t * obj, lv_event_t event ) {
 }
 
 //If you need a status of something updated, such as a ping do it here...
-void NetTools_task( lv_task_t * task ) {
+/*void NetTools_task( lv_task_t * task ) {
     // put your code her
-}
+}*/

@@ -1,9 +1,14 @@
 /****************************************************************************
- *   Aug 3 12:17:11 2020
- *   Copyright  2020  Dirk Brosswick
- *   Email: dirk.brosswick@googlemail.com
+ *  NetTools_setup.h
+ *  Copyright  2020  David Stewart / NorthernDIY
+ *  Email: genericsoftwaredeveloper@gmail.com
+ *
+ *  Requires Libraries: 
+ *      WakeOnLan by a7md0      https://github.com/a7md0/WakeOnLan
+ *
+ *  Based on the work of Dirk Brosswick,  sharandac / My-TTGO-Watch  Example_App"
  ****************************************************************************/
- 
+
 /*
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License as published by
@@ -26,4 +31,4 @@
 
     void NetTools_setup_setup( uint32_t tile_num );
 
-#endif // _EXAMPLE_APP_SETUP_H
+#endif // _NETTOOLS_SETUP_H

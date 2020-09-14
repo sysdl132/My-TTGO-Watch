@@ -1,7 +1,12 @@
 /****************************************************************************
- *   Aug 3 12:17:11 2020
- *   Copyright  2020  Dirk Brosswick
- *   Email: dirk.brosswick@googlemail.com
+ *  NetTools.cpp
+ *  Copyright  2020  David Stewart / NorthernDIY
+ *  Email: genericsoftwaredeveloper@gmail.com
+ *
+ *  Requires Libraries: 
+ *      WakeOnLan by a7md0      https://github.com/a7md0/WakeOnLan
+ *
+ *  Based on the work of Dirk Brosswick,  sharandac / My-TTGO-Watch  Example_App"
  ****************************************************************************/
  
 /*
@@ -31,6 +36,10 @@
 #include "gui/app.h"
 #include "gui/widget.h"
 
+#include "hardware/json_psram_allocator.h"
+
+NetTools_config_t NetTools_config;
+
 uint32_t NetTools_main_tile_num;
 uint32_t NetTools_setup_tile_num;
 
@@ -49,10 +58,14 @@ LV_IMG_DECLARE(info_1_16px);
 static void enter_NetTools_event_cb( lv_obj_t * obj, lv_event_t event );
 static void enter_NetTools_widget_event_cb( lv_obj_t * obj, lv_event_t event );
 
+void NetTools_load_config( void);
+
 /*
  * setup routine for example app
  */
 void NetTools_setup( void ) {
+    
+    NetTools_load_config();
     // register 2 vertical tiles and get the first tile number and save it for later use
     NetTools_main_tile_num = mainbar_add_app_tile( 1, 2 );
     NetTools_setup_tile_num = NetTools_main_tile_num + 1;
@@ -63,7 +76,7 @@ void NetTools_setup( void ) {
     // use https://lvgl.io/tools/imageconverter to convert your images and set "true color with alpha" to get fancy images
     // the resulting c-file can put in /app/examples/images/ and declare it like LV_IMG_DECLARE( your_icon );
     NetTools = app_register( "Net\nTools", &NetTools_64px, enter_NetTools_event_cb );
-    app_set_indicator( NetTools, ICON_INDICATOR_OK );
+    //app_set_indicator( NetTools, ICON_INDICATOR_OK );
 
 #ifdef NETTOOLS_WIDGET
     // register widget icon on the main tile
@@ -116,4 +129,62 @@ static void enter_NetTools_widget_event_cb( lv_obj_t * obj, lv_event_t event ) {
                                         mainbar_jump_to_tilenumber( NetTools_main_tile_num, LV_ANIM_OFF );
                                         break;
     }    
+}
+
+void NetTools_save_config( void ) {
+    fs::File file = SPIFFS.open( NetTools_JSON_CONFIG_FILE, FILE_WRITE );
+
+    if (!file) {
+        log_e("Can't open file: %s!", NetTools_JSON_CONFIG_FILE );
+    }
+    else {
+        SpiRamJsonDocument doc( 3500 );
+        //WOL Entries
+        doc["mac_address"] = NetTools_config.mac_address;
+        doc["ping_status"] = NetTools_config.ping_status; //Not used yet
+        
+        //Tasmota Entries
+        doc["tasmota1"] = NetTools_config.tasmota1_ip;
+        doc["tasmota2"] = NetTools_config.tasmota2_ip;
+        //doc["tasmota3_ip"] = NetTools_config.tasmota3_ip;
+
+        if ( serializeJsonPretty( doc, file ) == 0) {
+            log_e("Failed to write config file");
+        }
+        doc.clear();
+    }
+    file.close();
+}
+
+void NetTools_load_config( void ) {
+    if ( SPIFFS.exists( NetTools_JSON_CONFIG_FILE )) {        
+        fs::File file = SPIFFS.open( NetTools_JSON_CONFIG_FILE, FILE_READ );
+        if (!file) {
+            log_e("Can't open file: %s!", NetTools_JSON_CONFIG_FILE );
+        }
+        else {
+            int filesize = file.size();
+            SpiRamJsonDocument doc( filesize * 2 );
+
+            DeserializationError error = deserializeJson( doc, file );
+            if ( error ) {
+                log_e("update check deserializeJson() failed: %s", error.c_str() );
+            }
+            else {
+                //WOL Entries
+                strlcpy( NetTools_config.mac_address, doc["mac_address"], sizeof( NetTools_config.mac_address ) );
+                NetTools_config.ping_status = doc["ping_status"].as<bool>(); //Not used yet
+                //Tasmota Entries
+                strlcpy( NetTools_config.tasmota1_ip, doc["tasmota1"], sizeof( NetTools_config.tasmota1_ip ) );
+                strlcpy( NetTools_config.tasmota2_ip, doc["tasmota2"], sizeof( NetTools_config.tasmota2_ip ) );
+                
+            }        
+            doc.clear();
+        }
+        file.close();
+    }
+}
+
+NetTools_config_t *NetTools_get_config( void ) {
+    return( &NetTools_config );
 }

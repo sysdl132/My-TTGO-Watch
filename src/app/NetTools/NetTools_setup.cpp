@@ -1,7 +1,12 @@
 /****************************************************************************
- *   Aug 3 12:17:11 2020
- *   Copyright  2020  Dirk Brosswick
- *   Email: dirk.brosswick@googlemail.com
+ *  NetTools_setup.cpp
+ *  Copyright  2020  David Stewart / NorthernDIY
+ *  Email: genericsoftwaredeveloper@gmail.com
+ *
+ *  Requires Libraries: 
+ *      WakeOnLan by a7md0      https://github.com/a7md0/WakeOnLan
+ *
+ *  Based on the work of Dirk Brosswick,  sharandac / My-TTGO-Watch  Example_App"
  ****************************************************************************/
  
 /*
@@ -27,18 +32,29 @@
 
 #include "gui/mainbar/mainbar.h"
 #include "gui/statusbar.h"
+#include "gui/keyboard.h"
+#define INPUT_MAC_LENGTH 18
+#define INPUT_IP_LENGTH 18
 
 lv_obj_t *NetTools_setup_tile = NULL;
 lv_style_t NetTools_setup_style;
 
 lv_obj_t *NetTools_foobar_switch = NULL;
+lv_obj_t *NetTools_WOL_MAC_textfield = NULL;
+lv_obj_t *NetTools_Tasmota1_IP_textfield = NULL;
+lv_obj_t *NetTools_Tasmota2_IP_textfield = NULL;
+lv_obj_t *NetTools_Tasmota3_IP_textfield = NULL;
+
 
 LV_IMG_DECLARE(exit_32px);
 
 static void exit_NetTools_setup_event_cb( lv_obj_t * obj, lv_event_t event );
 static void NetTools_foobar_switch_event_cb( lv_obj_t * obj, lv_event_t event );
+static void NetTools_textarea_event_cb( lv_obj_t * obj, lv_event_t event );
 
 void NetTools_setup_setup( uint32_t tile_num ) {
+    
+    NetTools_config_t *NetTools_config = NetTools_get_config();
 
     NetTools_setup_tile = mainbar_get_tile_obj( tile_num );
     lv_style_copy( &NetTools_setup_style, mainbar_get_style() );
@@ -66,7 +82,8 @@ void NetTools_setup_setup( uint32_t tile_num ) {
     lv_obj_add_style( exit_label, LV_OBJ_PART_MAIN, &NetTools_setup_style  );
     lv_label_set_text( exit_label, "NetTools Setup");
     lv_obj_align( exit_label, exit_btn, LV_ALIGN_OUT_RIGHT_MID, 5, 0 );
-
+    
+    /*
     lv_obj_t *NetTools_foobar_switch_cont = lv_obj_create( NetTools_setup_tile, NULL );
     lv_obj_set_size( NetTools_foobar_switch_cont, lv_disp_get_hor_res( NULL ) , 40);
     lv_obj_add_style( NetTools_foobar_switch_cont, LV_OBJ_PART_MAIN, &NetTools_setup_style  );
@@ -83,6 +100,67 @@ void NetTools_setup_setup( uint32_t tile_num ) {
     lv_obj_add_style( NetTools_foobar_switch_label, LV_OBJ_PART_MAIN, &NetTools_setup_style  );
     lv_label_set_text( NetTools_foobar_switch_label, "Foo Bar");
     lv_obj_align( NetTools_foobar_switch_label, NetTools_foobar_switch_cont, LV_ALIGN_IN_LEFT_MID, 5, 0 );
+    */
+    //WakePC Mac Address
+    lv_obj_t *NetTools_WOL_MAC_cont = lv_obj_create( NetTools_setup_tile, NULL );
+    lv_obj_set_size(NetTools_WOL_MAC_cont, lv_disp_get_hor_res( NULL ) , 40);
+    lv_obj_add_style( NetTools_WOL_MAC_cont, LV_OBJ_PART_MAIN, &NetTools_setup_style  );
+    lv_obj_align( NetTools_WOL_MAC_cont, exit_cont, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 20 );
+    lv_obj_t *NetTools_WOL_MAC_label = lv_label_create( NetTools_WOL_MAC_cont, NULL);
+    lv_obj_add_style( NetTools_WOL_MAC_label, LV_OBJ_PART_MAIN, &NetTools_setup_style  );
+    lv_label_set_text( NetTools_WOL_MAC_label, "WOL MAC:");
+    lv_obj_align( NetTools_WOL_MAC_label, NetTools_WOL_MAC_cont, LV_ALIGN_IN_LEFT_MID, 5, 0 );
+    NetTools_WOL_MAC_textfield = lv_textarea_create( NetTools_WOL_MAC_cont, NULL);
+    lv_textarea_set_text( NetTools_WOL_MAC_textfield, NetTools_config->mac_address );
+    lv_textarea_set_pwd_mode( NetTools_WOL_MAC_textfield, false);
+    lv_textarea_set_one_line( NetTools_WOL_MAC_textfield, true);
+    lv_textarea_set_cursor_hidden( NetTools_WOL_MAC_textfield, true);
+    lv_obj_set_width( NetTools_WOL_MAC_textfield, LV_HOR_RES /4 * 2 );
+    lv_obj_align( NetTools_WOL_MAC_textfield, NetTools_WOL_MAC_cont, LV_ALIGN_IN_RIGHT_MID, -5, 0 );
+    lv_obj_set_event_cb( NetTools_WOL_MAC_textfield, NetTools_textarea_event_cb );
+    lv_textarea_set_accepted_chars(NetTools_WOL_MAC_textfield, "0123456789ABCDEF:");
+    lv_textarea_set_max_length(NetTools_WOL_MAC_textfield, INPUT_MAC_LENGTH);
+    
+    //Tasmota 1 Ip Address
+    lv_obj_t *NetTools_Tasmota1_IP_cont = lv_obj_create( NetTools_setup_tile, NULL );
+    lv_obj_set_size(NetTools_Tasmota1_IP_cont, lv_disp_get_hor_res( NULL ) , 40);
+    lv_obj_add_style( NetTools_Tasmota1_IP_cont, LV_OBJ_PART_MAIN, &NetTools_setup_style  );
+    lv_obj_align( NetTools_Tasmota1_IP_cont, NetTools_WOL_MAC_cont, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 10 );
+    lv_obj_t *NetTools_Tasmota1_IP_label = lv_label_create( NetTools_Tasmota1_IP_cont, NULL);
+    lv_obj_add_style( NetTools_Tasmota1_IP_label, LV_OBJ_PART_MAIN, &NetTools_setup_style  );
+    lv_label_set_text( NetTools_Tasmota1_IP_label, "Tasmota 1 IP:");
+    lv_obj_align( NetTools_Tasmota1_IP_label, NetTools_Tasmota1_IP_cont, LV_ALIGN_IN_LEFT_MID, 5, 0 );
+    NetTools_Tasmota1_IP_textfield = lv_textarea_create( NetTools_Tasmota1_IP_cont, NULL);
+    lv_textarea_set_text( NetTools_Tasmota1_IP_textfield, NetTools_config->tasmota1_ip );
+    lv_textarea_set_pwd_mode( NetTools_Tasmota1_IP_textfield, false);
+    lv_textarea_set_one_line( NetTools_Tasmota1_IP_textfield, true);
+    lv_textarea_set_cursor_hidden( NetTools_Tasmota1_IP_textfield, true);
+    lv_obj_set_width( NetTools_Tasmota1_IP_textfield, LV_HOR_RES /4 * 2 );
+    lv_obj_align( NetTools_Tasmota1_IP_textfield, NetTools_Tasmota1_IP_cont, LV_ALIGN_IN_RIGHT_MID, -5, 0 );
+    lv_obj_set_event_cb( NetTools_Tasmota1_IP_textfield, NetTools_textarea_event_cb );
+    lv_textarea_set_accepted_chars(NetTools_Tasmota1_IP_textfield, "0123456789.");
+    lv_textarea_set_max_length(NetTools_Tasmota1_IP_textfield, INPUT_IP_LENGTH);
+    
+    //Tasmota 2 Ip Address
+    lv_obj_t *NetTools_Tasmota2_IP_cont = lv_obj_create( NetTools_setup_tile, NULL );
+    lv_obj_set_size(NetTools_Tasmota2_IP_cont, lv_disp_get_hor_res( NULL ) , 40);
+    lv_obj_add_style( NetTools_Tasmota2_IP_cont, LV_OBJ_PART_MAIN, &NetTools_setup_style  );
+    lv_obj_align( NetTools_Tasmota2_IP_cont, NetTools_Tasmota1_IP_cont, LV_ALIGN_OUT_BOTTOM_LEFT, 0, 10 );
+    lv_obj_t *NetTools_Tasmota2_IP_label = lv_label_create( NetTools_Tasmota2_IP_cont, NULL);
+    lv_obj_add_style( NetTools_Tasmota2_IP_label, LV_OBJ_PART_MAIN, &NetTools_setup_style  );
+    lv_label_set_text( NetTools_Tasmota2_IP_label, "Tasmota 2 IP:");
+    lv_obj_align( NetTools_Tasmota2_IP_label, NetTools_Tasmota2_IP_cont, LV_ALIGN_IN_LEFT_MID, 5, 0 );
+    NetTools_Tasmota2_IP_textfield = lv_textarea_create( NetTools_Tasmota2_IP_cont, NULL);
+    lv_textarea_set_text( NetTools_Tasmota2_IP_textfield, NetTools_config->tasmota2_ip );
+    lv_textarea_set_pwd_mode( NetTools_Tasmota2_IP_textfield, false);
+    lv_textarea_set_one_line( NetTools_Tasmota2_IP_textfield, true);
+    lv_textarea_set_cursor_hidden( NetTools_Tasmota2_IP_textfield, true);
+    lv_obj_set_width( NetTools_Tasmota2_IP_textfield, LV_HOR_RES /4 * 2 );
+    lv_obj_align( NetTools_Tasmota2_IP_textfield, NetTools_Tasmota2_IP_cont, LV_ALIGN_IN_RIGHT_MID, -5, 0 );
+    lv_obj_set_event_cb( NetTools_Tasmota2_IP_textfield, NetTools_textarea_event_cb );
+    lv_textarea_set_accepted_chars(NetTools_Tasmota2_IP_textfield, "0123456789.");
+    lv_textarea_set_max_length(NetTools_Tasmota2_IP_textfield, INPUT_IP_LENGTH);
+    
 }
 
 static void NetTools_foobar_switch_event_cb( lv_obj_t * obj, lv_event_t event ) {
@@ -92,9 +170,27 @@ static void NetTools_foobar_switch_event_cb( lv_obj_t * obj, lv_event_t event ) 
     }
 }
 
+static void NetTools_textarea_event_cb( lv_obj_t * obj, lv_event_t event ) {
+    if( event == LV_EVENT_CLICKED ) {
+        keyboard_set_textarea( obj );
+    }
+}
+
 static void exit_NetTools_setup_event_cb( lv_obj_t * obj, lv_event_t event ) {
     switch( event ) {
-        case( LV_EVENT_CLICKED ):       mainbar_jump_to_tilenumber( NetTools_get_app_main_tile_num(), LV_ANIM_ON );
+        case( LV_EVENT_CLICKED ):       
+                                        keyboard_hide();
+                                        NetTools_config_t *NetTools_config = NetTools_get_config();
+                                        //WOL Entry
+                                        strlcpy( NetTools_config->mac_address, lv_textarea_get_text( NetTools_WOL_MAC_textfield ), sizeof( NetTools_config->mac_address ) );
+
+                                        //Tasmota Entries
+                                        strlcpy( NetTools_config->tasmota1_ip, lv_textarea_get_text( NetTools_Tasmota1_IP_textfield ), sizeof( NetTools_config->tasmota1_ip ) );
+                                        strlcpy( NetTools_config->tasmota2_ip, lv_textarea_get_text( NetTools_Tasmota2_IP_textfield ), sizeof( NetTools_config->tasmota2_ip ) );
+                                        
+                                        
+                                        NetTools_save_config();
+                                        mainbar_jump_to_tilenumber( NetTools_get_app_main_tile_num(), LV_ANIM_ON );
                                         break;
     }
 }

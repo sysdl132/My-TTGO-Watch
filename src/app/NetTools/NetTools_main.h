@@ -1,7 +1,12 @@
 /****************************************************************************
- *   Aug 3 12:17:11 2020
- *   Copyright  2020  Dirk Brosswick
- *   Email: dirk.brosswick@googlemail.com
+ *  NetTools_main.h
+ *  Copyright  2020  David Stewart / NorthernDIY
+ *  Email: genericsoftwaredeveloper@gmail.com
+ *
+ *  Requires Libraries: 
+ *      WakeOnLan by a7md0      https://github.com/a7md0/WakeOnLan
+ *
+ *  Based on the work of Dirk Brosswick,  sharandac / My-TTGO-Watch  Example_App"
  ****************************************************************************/
  
 /*
@@ -26,10 +31,10 @@
 
     void NetTools_main_setup( uint32_t tile_num );
 
-#endif // _EXAMPLE_APP_MAIN_H
+#endif // _NETTOOLS_MAIN_H
 
-//Replace these with those appropriate for your network!    
-#define MY_PC_WOL_MAC "F8:B1:56:A1:71:95" //MAC Address Used For WOL
-#define WOL_NAME "Freki"
-#define TOGGLE1_NAME "Tasmota1"
-#define TOGGLE1_URL "http://172.17.2.31/cm?cmnd=Power%20Toggle"  //Tasmota1 Toggle Url
+//These are button labels, replace as needed to suit your setup   
+#define WOL_NAME "WakePC"
+#define TOGGLE1_NAME "Tasmota 1"
+#define TOGGLE2_NAME "Tasmota 2"
+
