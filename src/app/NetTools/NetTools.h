@@ -35,7 +35,7 @@
     #define HTTP_PREFIX  "http://"
     
     typedef struct {
-        char mac_address[15] = "00.00.00.00.00"; //A default value in typical MAC address format
+        char mac_address[21] = "00:00:00:00:00:00:00"; //A default value in typical MAC address format
         bool ping_status = false;
         char tasmota1_ip[16] = "000.000.000.000"; //A default value in typical IP address format
         char tasmota2_ip[16] = "000.000.000.000"; //A default value in typical IP address format

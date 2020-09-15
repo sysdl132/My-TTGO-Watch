@@ -33,7 +33,7 @@
 #include "gui/mainbar/mainbar.h"
 #include "gui/statusbar.h"
 #include "gui/keyboard.h"
-#define INPUT_MAC_LENGTH 18
+#define INPUT_MAC_LENGTH 20
 #define INPUT_IP_LENGTH 18
 
 lv_obj_t *NetTools_setup_tile = NULL;
