@@ -31,27 +31,41 @@
 
 EventGroupHandle_t time_event_handle = NULL;
 TaskHandle_t _timesync_Task;
-void timesync_Task( void * pvParameters );
-
 timesync_config_t timesync_config;
 
-void timesync_wifictl_event_cb( EventBits_t event, char* msg );
+void timesync_Task( void * pvParameters );
+bool timesync_powermgm_event_cb( EventBits_t event, void *arg );
+bool timesync_wifictl_event_cb( EventBits_t event, void *arg );
 
 void timesync_setup( void ) {
 
     timesync_read_config();
     time_event_handle = xEventGroupCreate();
 
-    wifictl_register_cb( WIFICTL_CONNECT, timesync_wifictl_event_cb );
+    wifictl_register_cb( WIFICTL_CONNECT, timesync_wifictl_event_cb, "timesync" );
+    powermgm_register_cb( POWERMGM_SILENCE_WAKEUP | POWERMGM_STANDBY | POWERMGM_WAKEUP, timesync_powermgm_event_cb, "timesync" );
 }
 
-void timesync_wifictl_event_cb( EventBits_t event, char* msg ) {
-    log_i("timesync wifictl event: %04x", event );
+bool timesync_powermgm_event_cb( EventBits_t event, void *arg ) {
+    switch( event ) {
+        case POWERMGM_STANDBY:          log_i("go standby");
+                                        timesyncToRTC();
+                                        break;
+        case POWERMGM_WAKEUP:           log_i("go wkaeup");
+                                        timesyncToSystem();
+                                        break;
+        case POWERMGM_SILENCE_WAKEUP:   log_i("go silence wakeup");
+                                        timesyncToSystem();
+                                        break;
+    }
+    return( true );
+}
 
+bool timesync_wifictl_event_cb( EventBits_t event, void *arg ) {
     switch ( event ) {
         case WIFICTL_CONNECT:       if ( timesync_config.timesync ) {
                                         if ( xEventGroupGetBits( time_event_handle ) & TIME_SYNC_REQUEST ) {
-                                            return;
+                                            break;
                                         }
                                         else {
                                             xEventGroupSetBits( time_event_handle, TIME_SYNC_REQUEST );
@@ -65,6 +79,7 @@ void timesync_wifictl_event_cb( EventBits_t event, char* msg ) {
                                     }
                                     break;
     }
+    return( true );
 }
 
 void timesync_save_config( void ) {

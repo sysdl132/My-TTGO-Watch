@@ -22,27 +22,24 @@
 #include <TTGO.h>
 
 #include "rtcctl.h"
-#include "hardware/powermgm.h"
+#include "powermgm.h"
+#include "callback.h"
 
-EventGroupHandle_t rtcctl_status = NULL;
-portMUX_TYPE rtcctlMux = portMUX_INITIALIZER_UNLOCKED;
+volatile bool DRAM_ATTR rtc_irq_flag = false;
+portMUX_TYPE DRAM_ATTR RTC_IRQ_Mux = portMUX_INITIALIZER_UNLOCKED;
+static void IRAM_ATTR rtcctl_irq( void );
 
 static bool alarm_enabled = false;
 static int alarm_hour = 0;
 static int alarm_minute = 0;
 
-static void IRAM_ATTR rtcctl_irq( void );
-void rtcctl_send_event_cb( EventBits_t event );
-void rtcctl_test_cb( EventBits_t event );
-void rtcctl_set_event( EventBits_t bits );
-void rtcctl_clear_event( EventBits_t bits );
-bool rtcctl_get_event( EventBits_t bits );
+bool rtcctl_send_event_cb( EventBits_t event );
+bool rtcctl_powermgm_event_cb( EventBits_t event, void *arg );
+bool rtcctl_powermgm_loop_cb( EventBits_t event, void *arg );
 
-rtcctl_event_cb_t *rtcctl_event_cb_table = NULL;
-uint32_t rtcctl_event_cb_entrys = 0;
+callback_t *rtcctl_callback = NULL;
 
-void rtcctl_setup( void ){
-    rtcctl_status = xEventGroupCreate();
+void rtcctl_setup( void ) {
 
     pinMode( RTC_INT, INPUT_PULLUP);
     attachInterrupt( RTC_INT, &rtcctl_irq, FALLING );
@@ -54,94 +51,67 @@ void rtcctl_setup( void ){
     else{
         rtcctl_disable_alarm();
     }
-    rtcctl_set_alarm_term(alarm_hour, alarm_minute);
+    rtcctl_set_alarm_term( alarm_hour, alarm_minute );
+
+    powermgm_register_cb( POWERMGM_SILENCE_WAKEUP | POWERMGM_STANDBY | POWERMGM_WAKEUP, rtcctl_powermgm_event_cb, "rtcctl" );
+    powermgm_register_loop_cb( POWERMGM_SILENCE_WAKEUP | POWERMGM_WAKEUP, rtcctl_powermgm_loop_cb, "rtcctl loop" );
+}
+
+bool rtcctl_powermgm_event_cb( EventBits_t event, void *arg ) {
+    switch( event ) {
+        case POWERMGM_STANDBY:          log_i("go standby");
+                                        gpio_wakeup_enable( (gpio_num_t)RTC_INT, GPIO_INTR_LOW_LEVEL );
+                                        esp_sleep_enable_gpio_wakeup ();
+                                        break;
+        case POWERMGM_WAKEUP:           log_i("go wakeup");
+                                        break;
+        case POWERMGM_SILENCE_WAKEUP:   log_i("go silence wakeup");
+                                        break;
+    }
+    return( true );
+}
+
+bool rtcctl_powermgm_loop_cb( EventBits_t event, void *arg ) {
+    rtcctl_loop();
+    return( true );
+}
+
+static void IRAM_ATTR rtcctl_irq( void ) {
+    portENTER_CRITICAL_ISR(&RTC_IRQ_Mux);
+    rtc_irq_flag = true;
+    portEXIT_CRITICAL_ISR(&RTC_IRQ_Mux);
+    powermgm_set_event( POWERMGM_RTC_ALARM );
 }
 
 void rtcctl_loop( void ) {
     // fire callback
     if ( !powermgm_get_event( POWERMGM_STANDBY ) ) {
-        if ( rtcctl_get_event( RTCCTL_ALARM_OCCURRED ) ) {
+        portENTER_CRITICAL( &RTC_IRQ_Mux );
+        bool temp_rtc_irq_flag = rtc_irq_flag;
+        rtc_irq_flag = false;
+        portEXIT_CRITICAL( &RTC_IRQ_Mux );
+        if ( temp_rtc_irq_flag ) {
             rtcctl_send_event_cb( RTCCTL_ALARM_OCCURRED );
-            rtcctl_clear_event( RTCCTL_ALARM_OCCURRED );
         }
     }
 }
 
-static void IRAM_ATTR rtcctl_irq( void ) {
-    BaseType_t xHigherPriorityTaskWoken = pdFALSE;
-    /*
-     * setup an RTC event
-     */
-    xEventGroupSetBitsFromISR( rtcctl_status, RTCCTL_ALARM_OCCURRED, &xHigherPriorityTaskWoken );
-    if ( xHigherPriorityTaskWoken ) {
-        portYIELD_FROM_ISR();
-    }
-    powermgm_set_event( POWERMGM_RTC_ALARM );
-}
-
-void rtcctl_register_cb( EventBits_t event, RTCCTL_CALLBACK_FUNC rtcctl_event_cb ) {
-    rtcctl_event_cb_entrys++;
-
-    if ( rtcctl_event_cb_table == NULL ) {
-        rtcctl_event_cb_table = ( rtcctl_event_cb_t * )ps_malloc( sizeof( rtcctl_event_cb_t ) * rtcctl_event_cb_entrys );
-        if ( rtcctl_event_cb_table == NULL ) {
-            log_e("rtc_event_cb_table malloc faild");
+bool rtcctl_register_cb( EventBits_t event, CALLBACK_FUNC callback_func, const char *id ) {
+    if ( rtcctl_callback == NULL ) {
+        rtcctl_callback = callback_init( "rtctl" );
+        if ( rtcctl_callback == NULL ) {
+            log_e("rtcctl callback alloc failed");
             while(true);
         }
-    }
-    else {
-        rtcctl_event_cb_t *new_rtcctl_event_cb_table = NULL;
-
-        new_rtcctl_event_cb_table = ( rtcctl_event_cb_t * )ps_realloc( rtcctl_event_cb_table, sizeof( rtcctl_event_cb_t ) * rtcctl_event_cb_entrys );
-        if ( new_rtcctl_event_cb_table == NULL ) {
-            log_e("rtc_event_cb_table realloc faild");
-            while(true);
-        }
-        rtcctl_event_cb_table = new_rtcctl_event_cb_table;
-    }
-
-    rtcctl_event_cb_table[ rtcctl_event_cb_entrys - 1 ].event = event;
-    rtcctl_event_cb_table[ rtcctl_event_cb_entrys - 1 ].event_cb = rtcctl_event_cb;
-    log_i("register rtc_event_cb success (%p)", rtcctl_event_cb_table[ rtcctl_event_cb_entrys - 1 ].event_cb );
+    }    
+    return( callback_register( rtcctl_callback, event, callback_func, id ) );
 }
 
-void rtcctl_send_event_cb( EventBits_t event ) {
-    if ( rtcctl_event_cb_entrys == 0 ) {
-      return;
-    }
-
-    for ( int entry = 0 ; entry < rtcctl_event_cb_entrys ; entry++ ) {
-        yield();
-        if ( event & rtcctl_event_cb_table[ entry ].event ) {
-            log_i("call rtc_event_cb (%p)", rtcctl_event_cb_table[ entry ].event_cb );
-            rtcctl_event_cb_table[ entry ].event_cb( event );
-        }
-    }
+bool rtcctl_send_event_cb( EventBits_t event ) {
+    return( callback_send( rtcctl_callback, event, (void*)NULL ) );
 }
 
-void rtcctl_set_event( EventBits_t bits ) {
-    portENTER_CRITICAL(&rtcctlMux);
-    xEventGroupSetBits( rtcctl_status, bits );
-    portEXIT_CRITICAL(&rtcctlMux);
-}
-
-void rtcctl_clear_event( EventBits_t bits ) {
-    portENTER_CRITICAL(&rtcctlMux);
-    xEventGroupClearBits( rtcctl_status, bits );
-    portEXIT_CRITICAL(&rtcctlMux);
-}
-
-bool rtcctl_get_event( EventBits_t bits ) {
-    portENTER_CRITICAL(&rtcctlMux);
-    EventBits_t temp = xEventGroupGetBits( rtcctl_status ) & bits;
-    portEXIT_CRITICAL(&rtcctlMux);
-    if ( temp )
-        return( true );
-
-    return( false );
-}
-
-void rtcctl_set_alarm_term( uint8_t hour, uint8_t minute ){
+void rtcctl_set_alarm_term( uint8_t hour, uint8_t minute ) {
     TTGOClass *ttgo = TTGOClass::getWatch();
     if (alarm_enabled){
         ttgo->rtc->disableAlarm();
@@ -152,7 +122,6 @@ void rtcctl_set_alarm_term( uint8_t hour, uint8_t minute ){
     if (alarm_enabled){
         ttgo->rtc->enableAlarm();
     }
-
     rtcctl_send_event_cb( RTCCTL_ALARM_TERM_SET );
 }
 

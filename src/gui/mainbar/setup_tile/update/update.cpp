@@ -36,6 +36,7 @@
 #include "hardware/display.h"
 #include "hardware/powermgm.h"
 #include "hardware/wifictl.h"
+#include "hardware/motor.h"
 
 EventGroupHandle_t update_event_handle = NULL;
 TaskHandle_t _update_Task;
@@ -63,11 +64,11 @@ LV_IMG_DECLARE(setup_32px);
 LV_IMG_DECLARE(update_64px);
 LV_IMG_DECLARE(info_1_16px);
 
-void update_wifictl_event_cb( EventBits_t event, char* msg );
+bool update_wifictl_event_cb( EventBits_t event, void *arg );
 
 void update_tile_setup( void ) {
     // get an app tile and copy mainstyle
-    update_tile_num = mainbar_add_app_tile( 1, 2 );
+    update_tile_num = mainbar_add_app_tile( 1, 2, "update setup" );
     update_settings_tile = mainbar_get_tile_obj( update_tile_num );
 
     update_setup_tile_setup( update_tile_num + 1 );
@@ -129,20 +130,20 @@ void update_tile_setup( void ) {
     lv_label_set_text( update_status_label, "" );
     lv_obj_align( update_status_label, update_btn, LV_ALIGN_OUT_BOTTOM_MID, 0, 5 );
 
-    wifictl_register_cb( WIFICTL_CONNECT, update_wifictl_event_cb );
+    wifictl_register_cb( WIFICTL_CONNECT, update_wifictl_event_cb, "update" );
 
     update_event_handle = xEventGroupCreate();
     xEventGroupClearBits( update_event_handle, UPDATE_REQUEST );
 }
 
-void update_wifictl_event_cb( EventBits_t event, char* msg ) {
-    log_i("update wifictl event: %04x", event );
+bool update_wifictl_event_cb( EventBits_t event, void *arg ) {
     switch( event ) {
         case WIFICTL_CONNECT:       if ( update_setup_get_autosync() ) {
                                     update_check_version();
                                     break;
         }
     }
+    return( true );
 }
 
 static void enter_update_setup_setup_event_cb( lv_obj_t * obj, lv_event_t event ) {
@@ -168,6 +169,15 @@ static void exit_update_setup_event_cb( lv_obj_t * obj, lv_event_t event ) {
 static void update_event_handler(lv_obj_t * obj, lv_event_t event) {
     if( event == LV_EVENT_CLICKED ) {
         if ( reset ) {
+            TTGOClass *ttgo = TTGOClass::getWatch();
+            log_i("System reboot by user");
+            motor_vibe(20);
+            delay(20);
+            display_standby();
+            ttgo->stopLvglTick();
+            SPIFFS.end();
+            log_i("SPIFFS unmounted!");
+            delay(500);
             ESP.restart();
         }
         else if ( xEventGroupGetBits( update_event_handle) & ( UPDATE_GET_VERSION_REQUEST | UPDATE_REQUEST ) )  {
@@ -266,6 +276,7 @@ void update_Task( void * pvParameters ) {
     }
     xEventGroupClearBits( update_event_handle, UPDATE_REQUEST | UPDATE_GET_VERSION_REQUEST );
     lv_disp_trig_activity(NULL);
+    lv_obj_invalidate( lv_scr_act() );
     log_i("finish update task, heap: %d", ESP.getFreeHeap() );
     vTaskDelete( NULL );
 }

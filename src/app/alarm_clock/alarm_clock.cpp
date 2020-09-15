@@ -60,7 +60,7 @@ static void alarm_term_changed_cb(EventBits_t event ){
 // setup routine for example app
 void alarm_clock_setup( void ) {
     // register 2 vertical tiles and get the first tile number and save it for later use
-    main_tile_num = mainbar_add_app_tile( 1, 2 );
+    main_tile_num = mainbar_add_app_tile( 1, 2, "alarm clock" );
     setup_tile_num = main_tile_num + 1;
 
     alarm_setup(); //load persistant values

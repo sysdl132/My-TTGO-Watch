@@ -93,7 +93,7 @@ void alarm_data_store_data(bool enabled){
 
 void alarm_set_term(uint8_t hour, uint8_t minute){
     log_i("alarm_set term %d:%.2d", hour, minute);
-    rtcctl_set_alarm_term(hour, minute);
+    rtcctl_set_alarm_term( hour, minute );
 }
 
 uint8_t alarm_get_hour(){

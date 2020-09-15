@@ -49,6 +49,8 @@ AudioGeneratorWAV *wav;
 ESP8266SAM *sam;
 AudioFileSourcePROGMEM *progmem_file;
 
+ESP8266SAM *sam;
+
 #include "json_psram_allocator.h"
 
 bool sound_init = false;
@@ -80,10 +82,13 @@ void sound_setup( void ) {
     wav = new AudioGeneratorWAV();
     sam = new ESP8266SAM;
     sam->SetVoice(sam->VOICE_SAM);
+<<<<<<< HEAD
+=======
 
     powermgm_register_cb( POWERMGM_SILENCE_WAKEUP | POWERMGM_STANDBY | POWERMGM_WAKEUP, sound_powermgm_event_cb, "sound" );
     powermgm_register_loop_cb( POWERMGM_SILENCE_WAKEUP | POWERMGM_WAKEUP, sound_powermgm_loop_cb, "sound loop" );
 
+>>>>>>> upstream/experimental
     sound_init = true;
 }
 
@@ -140,6 +145,11 @@ void sound_set_enabled( bool enabled ) {
 void sound_loop( void ) {
     if ( sound_config.enable && sound_init ) {
         // we call sound_set_enabled(false) to ensure the PMU stops all power
+<<<<<<< HEAD
+        if ( mp3->isRunning() && !mp3->loop() ) sound_set_enabled(false);
+        if ( wav->isRunning() && !wav->loop() ) sound_set_enabled(false);
+        if ( !is_speaking ) sound_set_enabled(false);
+=======
         if ( mp3->isRunning() && !mp3->loop() ) {
             log_i("stop playing mp3 sound");
             sound_set_enabled(false);
@@ -148,6 +158,7 @@ void sound_loop( void ) {
             log_i("stop playing wav sound");
             sound_set_enabled(false);
         }
+>>>>>>> upstream/experimental
     }
 }
 
@@ -174,7 +185,11 @@ void sound_play_progmem_wav( const void *data, uint32_t len ) {
     }
 }
 
+<<<<<<< HEAD
+void sound_speak(const char *str)
+=======
 void sound_speak( const char *str )
+>>>>>>> upstream/experimental
 {
     if ( sound_config.enable ) {
         log_i("Speaking text", str);

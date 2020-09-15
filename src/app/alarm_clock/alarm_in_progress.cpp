@@ -112,7 +112,7 @@ static void alarm_task_function(lv_task_t * task){
     }
 }
 
-static void  alarm_occurred_event_event_callback ( EventBits_t event ){
+bool alarm_occurred_event_event_callback ( EventBits_t event, void* msg ) {
     switch ( event ){
         case ( RTCCTL_ALARM_OCCURRED ):
             statusbar_hide( true );
@@ -127,19 +127,21 @@ static void  alarm_occurred_event_event_callback ( EventBits_t event ){
             lv_task_create( alarm_task_function, highlight_time, LV_TASK_PRIO_MID, NULL );
             break;
     }
+    return( true );
 }
 
-void powermgmt_callback( EventBits_t event ){
+bool powermgmt_callback( EventBits_t event, void *arg ){
     switch( event ) {
         case( POWERMGM_STANDBY ):
             in_progress = false;
             break;
     }
+    return( true );
 }
 
 void alarm_in_progress_tile_setup( void ) {
     // get an app tile and copy mainstyle
-    tile_num = mainbar_add_app_tile( 1, 1 );
+    tile_num = mainbar_add_app_tile( 1, 1, "alarm in progress" );
     tile = mainbar_get_tile_obj( tile_num );
 
     lv_style_init( &popup_style );
@@ -167,6 +169,6 @@ void alarm_in_progress_tile_setup( void ) {
 
     wf_add_image( tile, alarm_clock_64px, container, LV_ALIGN_IN_BOTTOM_MID, 0, 0 );
 
-    rtcctl_register_cb(RTCCTL_ALARM_OCCURRED , alarm_occurred_event_event_callback);
-    powermgm_register_cb(POWERMGM_STANDBY, powermgmt_callback);
+    rtcctl_register_cb( RTCCTL_ALARM_OCCURRED , alarm_occurred_event_event_callback, "alarm in progress" );
+    powermgm_register_cb( POWERMGM_STANDBY, powermgmt_callback, "alarm in progress" );
 }

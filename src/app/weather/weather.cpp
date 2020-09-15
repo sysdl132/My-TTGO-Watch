@@ -52,7 +52,7 @@ icon_t *weather_app = NULL;
 icon_t * weather_widget = NULL;
 
 static void enter_weather_widget_event_cb( lv_obj_t * obj, lv_event_t event );
-void weather_widget_wifictl_event_cb( EventBits_t event, char* msg );
+bool weather_widget_wifictl_event_cb( EventBits_t event, void *arg );
 
 LV_IMG_DECLARE(owm_01d_64px);
 LV_IMG_DECLARE(info_ok_16px);
@@ -64,7 +64,7 @@ void weather_app_setup( void ) {
     weather_load_config();
 
     // get an app tile and copy mainstyle
-    weather_app_tile_num = mainbar_add_app_tile( 1, 2 );
+    weather_app_tile_num = mainbar_add_app_tile( 1, 2, "Weather App" );
     weather_app_setup_tile_num = weather_app_tile_num + 1;
 
     // init forecast and setup tile
@@ -81,12 +81,10 @@ void weather_app_setup( void ) {
 
     weather_widget_event_handle = xEventGroupCreate();
 
-    wifictl_register_cb( WIFICTL_OFF | WIFICTL_CONNECT, weather_widget_wifictl_event_cb );
+    wifictl_register_cb( WIFICTL_OFF | WIFICTL_CONNECT, weather_widget_wifictl_event_cb, "weather" );
 }
 
-void weather_widget_wifictl_event_cb( EventBits_t event, char* msg ) {
-    log_i("weather widget wifictl event: %04x", event );
-
+bool weather_widget_wifictl_event_cb( EventBits_t event, void *arg ) {
     switch( event ) {
         case WIFICTL_CONNECT:       if ( weather_config.autosync ) {
                                         weather_widget_sync_request();
@@ -95,6 +93,7 @@ void weather_widget_wifictl_event_cb( EventBits_t event, char* msg ) {
         case WIFICTL_OFF:           widget_hide_indicator( weather_widget );
                                     break;
     }
+    return( true );
 }
 
 static void enter_weather_widget_event_cb( lv_obj_t * obj, lv_event_t event ) {

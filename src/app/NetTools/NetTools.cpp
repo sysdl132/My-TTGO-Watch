@@ -67,7 +67,7 @@ void NetTools_setup( void ) {
     
     NetTools_load_config();
     // register 2 vertical tiles and get the first tile number and save it for later use
-    NetTools_main_tile_num = mainbar_add_app_tile( 1, 2 );
+    NetTools_main_tile_num = mainbar_add_app_tile( 1, 2, "Net\nTools" );
     NetTools_setup_tile_num = NetTools_main_tile_num + 1;
 
     // register app icon on the app tile

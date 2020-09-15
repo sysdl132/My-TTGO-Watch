@@ -31,7 +31,25 @@
         uint8_t volume = 50;
     } sound_config_t;
 
+<<<<<<< HEAD
     /**
+    * @brief put sound output to standby (disable)
+    */
+    void sound_standby( void );
+    /**
+    * @brief wakeup sound output
+    */
+    void sound_wakeup( void );
+    /**
+     * @brief enable or disable the power output for AXP202_LDO3
+     * 
+     * @param enable = true sets the AXP202_LDO3 power output to high false to low
+     */
+    void sound_set_enabled( bool enabled = true );
+    /**
+=======
+    /**
+>>>>>>> upstream/experimental
      * @brief play mp3 file from SPIFFS by path/filename
      * 
      * @param   filename    the SPIFFS path to the file to be played
@@ -51,6 +69,13 @@
      */
     void sound_setup( void );
     /**
+<<<<<<< HEAD
+     * @brief speak
+     *  
+     * @param   str    the text to be spoken
+     */
+    void sound_speak( const char *str );
+=======
      * @brief put sound output to standby (disable)
      */
     void sound_standby( void );
@@ -64,17 +89,21 @@
      * @param enable = true sets the AXP202_LDO3 power output to high false to low
      */
     void sound_set_enabled( bool enabled = true );
+>>>>>>> upstream/experimental
     /**
      * @brief sound loop
      */
     void sound_loop( void );
     /**
+<<<<<<< HEAD
+=======
      * @brief speak
      *  
      * @param   str    the text to be spoken
      */
     void sound_speak( const char *str );
     /**
+>>>>>>> upstream/experimental
      * @brief save config for sound to spiffs
      */
     void sound_save_config( void );

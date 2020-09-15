@@ -53,7 +53,7 @@ static void enter_UserMods_widget_event_cb( lv_obj_t * obj, lv_event_t event );
  */
 void UserMods_setup( void ) {
     // register 1 vertical tile and get the first tile number and save it for later use
-    UserMods_main_tile_num = mainbar_add_app_tile( 1, 1 );
+    UserMods_main_tile_num = mainbar_add_app_tile( 1, 1, "User\nMods" );
     //UserMods_setup_tile_num = UserMods_main_tile_num + 1;//No use just yet
 
     // register app icon on the app tile

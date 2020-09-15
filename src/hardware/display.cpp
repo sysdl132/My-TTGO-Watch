@@ -34,6 +34,9 @@ display_config_t display_config;
 static uint8_t dest_brightness = 0;
 static uint8_t brightness = 0;
 
+bool display_powermgm_event_cb( EventBits_t event, void *arg );
+bool display_powermgm_loop_cb( EventBits_t event, void *arg );
+
 void display_setup( void ) {
     display_read_config();
 
@@ -43,29 +46,47 @@ void display_setup( void ) {
     ttgo->bl->adjust( 0 );
     ttgo->tft->setRotation( display_config.rotation / 90 );
     bma_set_rotate_tilt( display_config.rotation );
+
+    powermgm_register_cb( POWERMGM_SILENCE_WAKEUP | POWERMGM_STANDBY | POWERMGM_WAKEUP, display_powermgm_event_cb, "display" );
+    powermgm_register_loop_cb( POWERMGM_WAKEUP, display_powermgm_loop_cb, "display loop" );
+}
+
+bool display_powermgm_event_cb( EventBits_t event, void *arg ) {
+    switch( event ) {
+        case POWERMGM_STANDBY:          display_standby();
+                                        break;
+        case POWERMGM_WAKEUP:           display_wakeup( false );
+                                        break;
+        case POWERMGM_SILENCE_WAKEUP:   display_wakeup( true );
+                                        break;
+    }
+    return( true );
+}
+
+bool display_powermgm_loop_cb( EventBits_t event, void *arg ) {
+    display_loop();
+    return( true );
 }
 
 void display_loop( void ) {
   TTGOClass *ttgo = TTGOClass::getWatch();
 
-  if ( !powermgm_get_event( POWERMGM_STANDBY ) && !powermgm_get_event( POWERMGM_SILENCE_WAKEUP )) {
-    if ( dest_brightness != brightness ) {
-      if ( brightness < dest_brightness ) {
-        brightness++;
-        ttgo->bl->adjust( brightness );
-      }
-      else {
-        brightness--;
-        ttgo->bl->adjust( brightness );
-      }
+  if ( dest_brightness != brightness ) {
+    if ( brightness < dest_brightness ) {
+      brightness++;
+      ttgo->bl->adjust( brightness );
     }
-    if ( display_get_timeout() != DISPLAY_MAX_TIMEOUT ) {
-      if ( lv_disp_get_inactive_time(NULL) > ( ( display_get_timeout() * 1000 ) - display_get_brightness() * 8 ) ) {
-          dest_brightness = ( ( display_get_timeout() * 1000 ) - lv_disp_get_inactive_time( NULL ) ) / 8 ;
-      }
-      else {
-          dest_brightness = display_get_brightness();
-      }
+    else {
+      brightness--;
+      ttgo->bl->adjust( brightness );
+    }
+  }
+  if ( display_get_timeout() != DISPLAY_MAX_TIMEOUT ) {
+    if ( lv_disp_get_inactive_time(NULL) > ( ( display_get_timeout() * 1000 ) - display_get_brightness() * 8 ) ) {
+        dest_brightness = ( ( display_get_timeout() * 1000 ) - lv_disp_get_inactive_time( NULL ) ) / 8 ;
+    }
+    else {
+        dest_brightness = display_get_brightness();
     }
   }
 }
@@ -100,7 +121,6 @@ void display_wakeup( bool silence ) {
     ttgo->bl->adjust( 0 );
     brightness = 0;
     dest_brightness = display_get_brightness();
-    motor_vibe( 1 );
   }
 }
 
