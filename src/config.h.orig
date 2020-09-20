@@ -33,9 +33,9 @@
     * firmeware version string
     */
 <<<<<<< HEAD
-    #define __FIRMWARE__            "2020091203"
-=======
     #define __FIRMWARE__            "2020091502"
+=======
+    #define __FIRMWARE__            "2020091604"
 >>>>>>> upstream/experimental
 
 #endif // _CONFIG_H
