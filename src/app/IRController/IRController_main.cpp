@@ -200,7 +200,7 @@ static void pwr_IRController_main_event_cb( lv_obj_t * obj, lv_event_t event ) {
     switch( event ) {
         case( LV_EVENT_CLICKED ):       
                                         pinMode(13, OUTPUT);
-                                        digitalWrite(13, LOW); //No Current Limiting so keep it off
+                                        digitalWrite(13, LOW); //No Current Limiting so keep it off            
                                         irsend.sendRaw(S_pwr, 68, 38);
                                         delay(50);
                                         digitalWrite(13, LOW); //No Current Limiting so keep it off
@@ -211,7 +211,7 @@ static void mute_IRController_main_event_cb( lv_obj_t * obj, lv_event_t event ) 
     switch( event ) {
         case( LV_EVENT_CLICKED ):       
                                         pinMode(13, OUTPUT);
-                                        digitalWrite(13, LOW); //No Current Limiting so keep it off
+                                        digitalWrite(13, LOW); //No Current Limiting so keep it off            
                                         irsend.sendRaw(S_mute, 68, 38);
                                         delay(50);
                                         digitalWrite(13, LOW); //No Current Limiting so keep it off
@@ -223,7 +223,7 @@ static void source_IRController_main_event_cb( lv_obj_t * obj, lv_event_t event 
     switch( event ) {
         case( LV_EVENT_CLICKED ):       
                                         pinMode(13, OUTPUT);
-                                        digitalWrite(13, LOW); //No Current Limiting so keep it off
+                                        digitalWrite(13, LOW); //No Current Limiting so keep it off            
                                         irsend.sendRaw(S_scr, 68, 38);
                                         delay(50);
                                         digitalWrite(13, LOW); //No Current Limiting so keep it off
@@ -234,7 +234,7 @@ static void volup_IRController_main_event_cb( lv_obj_t * obj, lv_event_t event )
     switch( event ) {
         case( LV_EVENT_CLICKED ):       
                                         pinMode(13, OUTPUT);
-                                        digitalWrite(13, LOW); //No Current Limiting so keep it off
+                                        digitalWrite(13, LOW); //No Current Limiting so keep it off            
                                         irsend.sendRaw(S_vup, 68, 38);
                                         delay(50);
                                         digitalWrite(13, LOW); //No Current Limiting so keep it off
@@ -246,7 +246,7 @@ static void voldn_IRController_main_event_cb( lv_obj_t * obj, lv_event_t event )
     switch( event ) {
         case( LV_EVENT_CLICKED ):       
                                         pinMode(13, OUTPUT);
-                                        digitalWrite(13, LOW); //No Current Limiting so keep it off
+                                        digitalWrite(13, LOW); //No Current Limiting so keep it off            
                                         irsend.sendRaw(S_vdown, 68, 38);
                                         delay(50);
                                         digitalWrite(13, LOW); //No Current Limiting so keep it off
@@ -257,7 +257,7 @@ static void rExit_IRController_main_event_cb( lv_obj_t * obj, lv_event_t event )
     switch( event ) {
         case( LV_EVENT_CLICKED ):       
                                         pinMode(13, OUTPUT);
-                                        digitalWrite(13, LOW); //No Current Limiting so keep it off
+                                        digitalWrite(13, LOW); //No Current Limiting so keep it off            
                                         irsend.sendRaw(S_exit, 68, 38);
                                         delay(50);
                                         digitalWrite(13, LOW); //No Current Limiting so keep it off
