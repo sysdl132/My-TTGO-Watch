@@ -45,7 +45,14 @@ bool touch_powermgm_event_cb( EventBits_t event, void *arg ) {
                                         ttgo->touch->enterMonitorMode();
                                         break;
         case POWERMGM_WAKEUP:           log_i("go wakeup");
+                                        /*ttgo->power->gpioWrite(AXP_GPIO_3, true);
+                                        delay(25);
+                                        ttgo->power->gpioWrite(AXP_GPIO_3, false);
+                                        delay(25);
+                                        ttgo->power->gpioWrite(AXP_GPIO_3, true);
+                                        */
                                         ttgo->touch->enterMonitorMode();
+                                        
                                         break;
         case POWERMGM_SILENCE_WAKEUP:   log_i("go silence wakeup");
                                         //ttgo->touch->enterSleepMode();
