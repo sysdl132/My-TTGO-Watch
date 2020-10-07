@@ -41,22 +41,21 @@ bool touch_powermgm_event_cb( EventBits_t event, void *arg ) {
     TTGOClass *ttgo = TTGOClass::getWatch();
     switch( event ) {
         case POWERMGM_STANDBY:          log_i("go standby");
-                                        //ttgo->touch->enterSleepMode();
-                                        ttgo->touch->enterMonitorMode();
+                                        ttgo->touch->enterSleepMode();
+                                        //ttgo->touch->enterMonitorMode();
                                         break;
         case POWERMGM_WAKEUP:           log_i("go wakeup");
-                                        /*ttgo->power->gpioWrite(AXP_GPIO_3, true);
-                                        delay(25);
                                         ttgo->power->gpioWrite(AXP_GPIO_3, false);
                                         delay(25);
                                         ttgo->power->gpioWrite(AXP_GPIO_3, true);
-                                        */
-                                        ttgo->touch->enterMonitorMode();
+                                        delay(25);
+                                        
+                                        //ttgo->touch->enterMonitorMode();
                                         
                                         break;
         case POWERMGM_SILENCE_WAKEUP:   log_i("go silence wakeup");
-                                        //ttgo->touch->enterSleepMode();
-                                        ttgo->touch->enterMonitorMode();
+                                        ttgo->touch->enterSleepMode();
+                                        //ttgo->touch->enterMonitorMode();
                                         break;
     }
     return( true );
