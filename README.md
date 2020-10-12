@@ -11,6 +11,10 @@
 
 A smartwatch based on ESP32 from LilyGo. Currently under development.
 
+# Note!!!!!!
+#   This firmware version requires hardware modifications to support touch controller sleeping!  Documentation of hardware mods is currently work in progress!
+
+
 # Telegram chatgroup
 
 Telegram chatgroup is here:
